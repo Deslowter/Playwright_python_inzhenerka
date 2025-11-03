@@ -12,13 +12,13 @@ class LoginPage(BasePage):
     @allure.step("Авторизация: {email}")
     def login(self, email: str, password: str):
         self.navigate()
-        # Ждём, что поле email доступно для ввода (страница загружена)
+        # Ждём что поле email доступно для ввода (страница загружена)
         expect(self.page.locator(self.EMAIL_INPUT)).to_be_visible(timeout=60000)
         self.fill(self.EMAIL_INPUT, email)
         self.fill(self.PASSWORD_INPUT, password)
         self.click(self.LOGIN_BUTTON)
 
-        # Вместо wait_for_timeout — ждём появления кнопки "Выйти"
+        # Вместо wait_for_timeout ждем появления кнопки "Выйти"
         self.page.locator(self.LOGOUT_BUTTON).wait_for(state="visible", timeout=60000)
 
     def is_logged_in(self) -> bool:

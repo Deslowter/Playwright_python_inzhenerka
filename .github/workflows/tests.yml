@@ -9,10 +9,9 @@ on:
   schedule:
     - cron: '0 9 * * *'
 
-# 🔑 Разрешить GITHUB_TOKEN писать контент
 permissions:
   contents: write
-  issues: write  # нужно для комментариев в PR
+  issues: write
 
 jobs:
   test:
@@ -57,7 +56,7 @@ jobs:
           sudo mv allure-2.24.1 /opt/allure
           echo "/opt/allure/bin" >> $GITHUB_PATH
 
-      - name: Сгенерировать Allure отчёт
+      - name: Сгенерировать Allure отчет
         if: always()
         run: |
           if [ -d "allure-results" ] && [ -n "$(ls -A allure-results 2>/dev/null)" ]; then
@@ -82,7 +81,7 @@ jobs:
           name: allure-report
           path: allure-report/
 
-      - name: Опубликовать отчёт на GitHub Pages
+      - name: Опубликовать отчет на GitHub Pages
         if: always() && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
         with:

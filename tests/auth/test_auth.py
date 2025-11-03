@@ -3,7 +3,9 @@ import allure
 from pages.login_page import LoginPage
 from tests.conftest import EMAIL, PASSWORD
 
-
+@allure.parent_suite("UI тесты")
+@allure.suite("Авторизация")
+@allure.sub_suite("Позитивные сценарии")
 @allure.epic("Авторизация")
 @allure.feature("Вход в систему")
 @pytest.mark.smoke
