@@ -42,6 +42,14 @@ jobs:
       - name: Установить Playwright и Chromium
         run: python -m playwright install chromium
 
+      - name: Скачать предыдущую историю Allure
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-history
+          path: allure-history
+        continue-on-error: true
+
       - name: Запуск тестов
         run: python -m pytest tests/ --alluredir=allure-results -v
         continue-on-error: true
@@ -60,12 +68,33 @@ jobs:
         if: always()
         run: |
           if [ -d "allure-results" ] && [ -n "$(ls -A allure-results 2>/dev/null)" ]; then
+            mkdir -p allure-results/history
+            cp -r allure-history/* allure-results/history/ || true
             allure generate allure-results --clean -o allure-report
           else
             echo "Нет данных для Allure."
             mkdir -p allure-report
             echo "<h1>Allure Report</h1><p>Тесты не создали результаты (упали до генерации или не найдены).</p>" > allure-report/index.html
           fi
+
+      - name: Локализация Allure отчёта
+        if: always()
+        run: |
+          sed -i 's/Overview/Обзор/g' allure-report/index.html
+          sed -i 's/Suites/Наборы тестов/g' allure-report/index.html
+          sed -i 's/Graphs/Графики/g' allure-report/index.html
+          sed -i 's/Timeline/Хронология/g' allure-report/index.html
+          sed -i 's/Behaviors/Поведение/g' allure-report/index.html
+          sed -i 's/Packages/Пакеты/g' allure-report/index.html
+          sed -i 's/Retries/Повторные прогоны/g' allure-report/index.html
+          sed -i 's/Duration/Продолжительность/g' allure-report/index.html
+
+      - name: Сохранить историю Allure для следующего прогона
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-history
+          path: allure-report/history
 
       - name: Загрузить сырые результаты Allure
         if: always()

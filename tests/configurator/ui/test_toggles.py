@@ -3,7 +3,7 @@ import allure
 from pages.configurator_page import ConfiguratorPage
 
 
-@allure.parent_suite("UI-тесты")
+@allure.parent_suite("UI тесты")
 @allure.suite("Конфигуратор")
 @allure.sub_suite("Тесты переключателей")
 @allure.epic("Конфигуратор")
