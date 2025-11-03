@@ -1,5 +1,7 @@
 "Status","Start Time","Stop Time","Duration in ms","Parent Suite","Suite","Sub Suite","Test Class","Test Method","Name","Description"
-"broken","Mon Nov 03 13:17:31 UTC 2025","Mon Nov 03 13:17:31 UTC 2025","0","tests.configurator.e2e","test_full_order","TestE2E","","","E2E: Собрать заказ с полной конфигурацией","
+"passed","Mon Nov 03 13:21:01 UTC 2025","Mon Nov 03 13:21:08 UTC 2025","6817","tests.auth","test_auth","","","","test_successful_login[chromium]","Успешная авторизация"
+"passed","Mon Nov 03 13:21:33 UTC 2025","Mon Nov 03 13:21:35 UTC 2025","1507","tests.configurator.ui","test_toggles","TestToggles","","","Переключение на П-образную столешницу","Переключение на П-образную столешницу – отображается П-образная столешница"
+"passed","Mon Nov 03 13:21:12 UTC 2025","Mon Nov 03 13:21:25 UTC 2025","13496","tests.configurator.e2e","test_full_order","TestE2E","","","E2E: Собрать заказ с полной конфигурацией","
     Сценарий: Собрать заказ
 
     Конфигурация:
@@ -20,6 +22,4 @@
     c) Опции: Проточки для стока воды
     d) Итоговая стоимость: 451500.00 ₽
     "
-"broken","Mon Nov 03 13:17:31 UTC 2025","Mon Nov 03 13:17:31 UTC 2025","0","tests.auth","test_auth","","","","test_successful_login[chromium]","Успешная авторизация"
-"broken","Mon Nov 03 13:17:32 UTC 2025","Mon Nov 03 13:17:32 UTC 2025","0","tests.configurator.ui","test_toggles","TestToggles","","","Переключение на П-образную столешницу","Переключение на П-образную столешницу – отображается П-образная столешница"
-"broken","Mon Nov 03 13:17:31 UTC 2025","Mon Nov 03 13:17:31 UTC 2025","0","tests.configurator.ui","test_toggles","TestToggles","","","Проверка 'Скрыть столешницу'","Проверить, что работает переключатель 'Скрыть столешницу' – столешница не отображается"
+"passed","Mon Nov 03 13:21:29 UTC 2025","Mon Nov 03 13:21:30 UTC 2025","633","tests.configurator.ui","test_toggles","TestToggles","","","Проверка 'Скрыть столешницу'","Проверить, что работает переключатель 'Скрыть столешницу' – столешница не отображается"
