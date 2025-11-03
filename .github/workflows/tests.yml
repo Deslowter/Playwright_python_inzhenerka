@@ -5,9 +5,9 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
-  workflow_dispatch:  # Ручной запуск
+  workflow_dispatch:
   schedule:
-    - cron: '0 9 * * *'  # Ежедневно в 9:00 UTC
+    - cron: '0 9 * * *'
 
 jobs:
   test:
@@ -35,71 +35,52 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Установить браузеры Playwright
-        run: |
-          python -m playwright install chromium
+      - name: Установить Playwright и Chromium
+        run: python -m playwright install chromium
 
-      - name: Запуск всех тестов с генерацией Allure-результатов
+      - name: Запуск тестов
         run: python -m pytest tests/ --alluredir=allure-results -v
         continue-on-error: true
 
-      - name: Установить и сгенерировать Allure отчёт
+      - name: Генерация Allure отчёта
         if: always()
-        run: |
-          # Установка Allure CLI
-          wget -O allure.tgz https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz
-          tar -zxvf allure.tgz
-          sudo mv allure-2.24.1 /opt/allure
-          echo "/opt/allure/bin" >> $GITHUB_PATH
+        uses: simple-elf/allure-report-action@v2
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
 
-          # Генерация HTML-отчёта
-          allure generate allure-results --clean -o allure-report
-
-      - name: Загрузить результаты Allure (сырые)
+      - name: Загрузить сырые результаты Allure
         if: always()
-        uses: actions/upload-artifact@v4  # ← обновлено до v4
+        uses: actions/upload-artifact@v4
         with:
           name: allure-results
           path: allure-results/
-          retention-days: 30
 
       - name: Загрузить HTML-отчёт Allure
         if: always()
-        uses: actions/upload-artifact@v4  # ← обновлено до v4
+        uses: actions/upload-artifact@v4
         with:
           name: allure-report
           path: allure-report/
-          retention-days: 30
 
-      - name: Загрузить скриншоты при падении
-        if: failure()
-        uses: actions/upload-artifact@v4  # ← обновлено до v4
-        with:
-          name: screenshots
-          path: screenshots/
-          retention-days: 7
-
-      - name: Опубликовать Allure отчёт на GitHub Pages
+      - name: Опубликовать отчёт на GitHub Pages
         if: always() && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./allure-report
           publish_branch: gh-pages
-          destination_dir: allure-report
 
-      - name: Комментировать Pull Request с результатами
+      - name: Комментировать Pull Request
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
           script: |
             const comment = `
-            ## Результаты тестов Playwright
+            ## 🧪 Результаты тестов Playwright
             
-            Статус выполнения: **${{ job.status }}**  
-            [Просмотреть Allure-отчёт (в артефактах)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            
-            > Тесты запущены в рамках Pull Request. Детали — в логах и артефактах.
+            Статус: **${{ job.status }}**  
+            [Артефакты (Allure, логи)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             `;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
