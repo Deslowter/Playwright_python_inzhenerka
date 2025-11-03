@@ -46,85 +46,34 @@ jobs:
         run: python -m pytest tests/ --alluredir=allure-results -v
         continue-on-error: true
 
-      - name: Установить Allure CLI (с Java)
+      # === 1. Загрузить историю отчётов из gh-pages (как в инструкции) ===
+      - name: Load test report history
+        uses: actions/checkout@v3
         if: always()
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y default-jre
-          wget -O allure.tgz https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz
-          tar -zxvf allure.tgz
-          sudo mv allure-2.24.1 /opt/allure
-          echo "/opt/allure/bin" >> $GITHUB_PATH
-
-      - name: Скачать историю из gh-pages (только для main)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          git clone --branch gh-pages https://${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git gh-pages-temp
-          mkdir -p allure-results/history
-          if [ -d "gh-pages-temp/history" ]; then
-            cp -r gh-pages-temp/history/* allure-results/history/ || true
-          fi
-          rm -rf gh-pages-temp
-
-      - name: Сгенерировать Allure отчет
-        if: always()
-        run: |
-          if [ -d "allure-results" ] && [ -n "$(ls -A allure-results 2>/dev/null)" ]; then
-            allure generate allure-results --clean -o allure-report
-          else
-            echo "Нет данных для Allure."
-            mkdir -p allure-report
-            echo "<h1>Allure Report</h1><p>Тесты не создали результаты (упали или не найдены).</p>" > allure-report/index.html
-          fi
-
-      - name: Локализация Allure отчёта
-        if: always()
-        run: |
-          sed -i 's/Overview/Обзор/g' allure-report/index.html
-          sed -i 's/Suites/Наборы тестов/g' allure-report/index.html
-          sed -i 's/Graphs/Графики/g' allure-report/index.html
-          sed -i 's/Timeline/Хронология/g' allure-report/index.html
-          sed -i 's/Behaviors/Поведение/g' allure-report/index.html
-          sed -i 's/Packages/Пакеты/g' allure-report/index.html
-          sed -i 's/Retries/Повторные прогоны/g' allure-report/index.html
-          sed -i 's/Duration/Продолжительность/g' allure-report/index.html
-
-      - name: Обновить и опубликовать отчёт + историю в gh-pages (только для main)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git clone --branch gh-pages https://${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git gh-pages-temp
-
-          # Обновляем содержимое отчёта
-          cp -r allure-report/* gh-pages-temp/
-
-          # Обновляем историю (важно: после копирования отчёта!)
-          rm -rf gh-pages-temp/history
-          mkdir -p gh-pages-temp/history
-          if [ -d "allure-report/history" ]; then
-            cp -r allure-report/history/* gh-pages-temp/history/ || true
-          fi
-
-          cd gh-pages-temp
-          git add .
-          git commit -m "Update Allure report and history [$(date -u)]"
-          git push origin gh-pages
-
-      - name: Загрузить сырые результаты Allure (артефакт для отладки)
-        if: always()
-        uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
-          name: allure-results
-          path: allure-results/
+          ref: gh-pages
+          path: gh-pages
 
-      - name: Загрузить HTML-отчёт Allure (артефакт для отладки)
+      # === 2. Сгенерировать Allure отчёт с историей (как в инструкции) ===
+      - name: Build test report
+        uses: simple-elf/allure-report-action@v1.7
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: allure-report
-          path: allure-report/
+          gh_pages: gh-pages               # папка из checkout выше
+          allure_results: allure-results   # результаты текущего прогона
+          allure_history: allure-history   # куда сохранить отчёт + историю
 
+      # === 3. Опубликовать отчёт на GitHub Pages (как в инструкции) ===
+      - name: Publish test report
+        uses: peaceiris/actions-gh-pages@v3
+        if: always() && github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
+
+      # === Опционально: комментарий в PR (остаётся как есть) ===
       - name: Комментировать Pull Request
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
