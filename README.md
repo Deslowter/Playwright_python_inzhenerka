@@ -44,18 +44,27 @@ allure serve allure-results
 
 ```
 diploma_project/
-├── pages/              # Page Objects
-│   ├── base_page.py
-│   ├── login_page.py
-│   └── configurator_page.py
-├── tests/              # Тесты
-│   ├── conftest.py
-│   ├── test_auth.py
-│   └── test_configurator.py
-├── .github/workflows/  # CI/CD
-│   └── tests.yml
-├── requirements.txt
-└── pytest.ini
+├── pages/
+│ ├── base_page.py # Базовый класс страницы
+│ ├── login_page.py # Страница авторизации
+│ └── configurator_page.py # Страница конфигуратора
+│
+├── tests/
+│ ├── auth/ # Тесты авторизации
+│ │ └── test_auth.py
+│ │
+│ └── configurator/ # Тесты конфигуратора
+│ ├── ui/ # Компонентные UI-тесты
+│ │ └── test_toggles.py
+│ │
+│ └── e2e/ # Сквозные сценарии
+│ └── test_full_order.py
+│
+├── conftest.py # Общие фикстуры pytest
+├── pytest.ini # Конфигурация pytest
+├── requirements.txt # Зависимости Python
+├── .gitignore # Исключения для Git
+└── .github/workflows/ # GitHub Actions (CI)
 ```
 
 ## ✅ Реализованные сценарии
@@ -95,5 +104,5 @@ Password: LetsTest!
 
 ---
 
-**Автор:** Ваше имя  
+**Автор:** Нагорный Максим
 **Год:** 2025
