@@ -42,12 +42,26 @@ jobs:
         run: python -m pytest tests/ --alluredir=allure-results -v
         continue-on-error: true
 
-      - name: Генерация Allure отчёта
+      - name: Установить Allure CLI (с Java)
         if: always()
-        uses: simple-elf/allure-report-action@v2
-        with:
-          allure_results: allure-results
-          allure_report: allure-report
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          wget -O allure.tgz https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz
+          tar -zxvf allure.tgz
+          sudo mv allure-2.24.1 /opt/allure
+          echo "/opt/allure/bin" >> $GITHUB_PATH
+
+      - name: Сгенерировать Allure отчёт
+        if: always()
+        run: |
+          if [ -d "allure-results" ] && [ -n "$(ls -A allure-results 2>/dev/null)" ]; then
+            allure generate allure-results --clean -o allure-report
+          else
+            echo "Нет данных для Allure."
+            mkdir -p allure-report
+            echo "<h1>Allure Report</h1><p>Тесты не создали результаты (упали до генерации или не найдены).</p>" > allure-report/index.html
+          fi
 
       - name: Загрузить сырые результаты Allure
         if: always()
@@ -77,8 +91,8 @@ jobs:
         with:
           script: |
             const comment = `
-            ## 🧪 Результаты тестов Playwright
-            
+            ## Результаты тестов Playwright
+
             Статус: **${{ job.status }}**  
             [Артефакты (Allure, логи)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             `;
