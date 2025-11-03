@@ -7,18 +7,17 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:  # Ручной запуск
   schedule:
-    # Запуск каждый день в 9:00 UTC (можно настроить)
-    - cron: '0 9 * * *'
+    - cron: '0 9 * * *'  # Ежедневно в 9:00 UTC
 
 jobs:
   test:
     name: Запуск тестов Playwright
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     strategy:
       fail-fast: false
       matrix:
-        # Можно запускать на разных браузерах
         browser: [chromium]
 
     steps:
@@ -36,58 +35,52 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Установить браузеры Playwright
+      - name: Установить браузеры и зависимости Playwright
         run: |
           playwright install chromium
           playwright install-deps
 
-      - name: Запуск smoke-тестов
-        run: |
-          pytest -m smoke --alluredir=allure-results
-        continue-on-error: true
+      - name: Запуск всех тестов с генерацией Allure-результатов
+        run: python -m pytest tests/ --alluredir=allure-results -v
+        continue-on-error: true  # Чтобы отчёт всё равно собрался
 
-      - name: Запуск всех тестов
-        run: |
-          pytest --alluredir=allure-results --html=report.html --self-contained-html
-        continue-on-error: true
-
-      - name: Генерация Allure отчета
+      - name: Установить и сгенерировать Allure отчёт
         if: always()
         run: |
-          # Установка Allure
-          wget https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz
-          tar -zxvf allure-2.24.1.tgz
+          # Установка Allure CLI
+          wget -O allure.tgz https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz
+          tar -zxvf allure.tgz
           sudo mv allure-2.24.1 /opt/allure
-          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
-          
-          # Генерация отчета
+          echo "/opt/allure/bin" >> $GITHUB_PATH
+
+          # Генерация отчёта
           allure generate allure-results --clean -o allure-report
 
-      - name: Загрузить результаты Allure
+      - name: Загрузить результаты Allure (сырые)
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: allure-results
-          path: allure-results
+          path: allure-results/
           retention-days: 30
 
-      - name: Загрузить отчет Allure
+      - name: Загрузить HTML-отчёт Allure
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: allure-report
-          path: allure-report
+          path: allure-report/
           retention-days: 30
 
-      - name: Загрузить скриншоты
+      - name: Загрузить скриншоты при падении
         if: failure()
         uses: actions/upload-artifact@v3
         with:
           name: screenshots
-          path: screenshots
+          path: screenshots/
           retention-days: 7
 
-      - name: Публикация Allure отчета на GitHub Pages
+      - name: Опубликовать Allure отчёт на GitHub Pages
         if: always() && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -101,17 +94,14 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const fs = require('fs');
             const comment = `
-            ## Результаты тестов
+            ## Результаты тестов Playwright
             
-            Тесты были выполнены. Проверьте артефакты для детальных результатов:
-            - [Allure отчет](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            - Скриншоты (если есть падения)
+            Статус выполнения: **${{ job.status }}**  
+            [Просмотреть Allure-отчёт (в артефактах)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             
-            Статус: ${{ job.status }}
+            > Тесты запущены в рамках Pull Request. Детали — в логах и артефактах.
             `;
-            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
