@@ -9,6 +9,11 @@ on:
   schedule:
     - cron: '0 9 * * *'
 
+# 🔑 Разрешить GITHUB_TOKEN писать контент
+permissions:
+  contents: write
+  issues: write  # нужно для комментариев в PR
+
 jobs:
   test:
     name: Запуск тестов Playwright
