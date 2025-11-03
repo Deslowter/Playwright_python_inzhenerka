@@ -35,10 +35,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Установить браузеры и зависимости Playwright
+      - name: Установить браузеры Playwright
         run: |
-          playwright install chromium
-          playwright install-deps
+          python -m playwright install chromium
 
       - name: Запуск всех тестов с генерацией Allure-результатов
         run: python -m pytest tests/ --alluredir=allure-results -v
