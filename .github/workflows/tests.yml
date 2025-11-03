@@ -42,7 +42,7 @@ jobs:
 
       - name: Запуск всех тестов с генерацией Allure-результатов
         run: python -m pytest tests/ --alluredir=allure-results -v
-        continue-on-error: true  # Чтобы отчёт всё равно собрался
+        continue-on-error: true
 
       - name: Установить и сгенерировать Allure отчёт
         if: always()
@@ -53,12 +53,12 @@ jobs:
           sudo mv allure-2.24.1 /opt/allure
           echo "/opt/allure/bin" >> $GITHUB_PATH
 
-          # Генерация отчёта
+          # Генерация HTML-отчёта
           allure generate allure-results --clean -o allure-report
 
       - name: Загрузить результаты Allure (сырые)
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # ← обновлено до v4
         with:
           name: allure-results
           path: allure-results/
@@ -66,7 +66,7 @@ jobs:
 
       - name: Загрузить HTML-отчёт Allure
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # ← обновлено до v4
         with:
           name: allure-report
           path: allure-report/
@@ -74,7 +74,7 @@ jobs:
 
       - name: Загрузить скриншоты при падении
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # ← обновлено до v4
         with:
           name: screenshots
           path: screenshots/
@@ -89,7 +89,7 @@ jobs:
           publish_branch: gh-pages
           destination_dir: allure-report
 
-      - name: Комментировать PR с результатами
+      - name: Комментировать Pull Request с результатами
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
