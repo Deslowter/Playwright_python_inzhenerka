@@ -62,7 +62,7 @@ jobs:
         if: always()
         run: |
           # Установка Allure
-          wget https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz
+          wget https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz  
           tar -zxvf allure-2.24.1.tgz
           sudo mv allure-2.24.1 /opt/allure
           sudo ln -s /opt/allure/bin/allure /usr/bin/allure
@@ -72,7 +72,7 @@ jobs:
 
       - name: Upload Allure Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # ИСПРАВЛЕНО: v3 заменена на v4
         with:
           name: allure-results-${{ github.run_id }}
           path: allure-results
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload Allure Report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # ИСПРАВЛЕНО: v3 заменена на v4
         with:
           name: allure-report-${{ github.run_id }}
           path: ${{ env.REPORT_DIR }}
@@ -88,7 +88,7 @@ jobs:
 
       - name: Upload Screenshots
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # ИСПРАВЛЕНО: v3 заменена на v4
         with:
           name: screenshots-${{ github.run_id }}
           path: screenshots
