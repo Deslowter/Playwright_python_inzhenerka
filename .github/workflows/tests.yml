@@ -7,7 +7,7 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:  # Ручной запуск
   schedule:
-    # Запуск каждый день в 9:00 UTC
+    # Запуск каждый день в 9:00 UTC (можно настроить)
     - cron: '0 9 * * *'
 
 jobs:
@@ -103,10 +103,11 @@ jobs:
           script: |
             const fs = require('fs');
             const comment = `
-            ## Test Results
+            ## 🧪 Test Results
             
-            - [Allure Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            - Screenshots (if any failures)
+            Tests have been executed. Check the artifacts for detailed results:
+            - 📊 [Allure Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - 📸 Screenshots (if any failures)
             
             Status: ${{ job.status }}
             `;
