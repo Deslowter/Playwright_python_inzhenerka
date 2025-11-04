@@ -29,7 +29,7 @@ jobs:
       - name: Получить код
         uses: actions/checkout@v4
 
-      # === 2. Очистка места на runner'е (предотвращает Docker build failed) ===
+      # === 2. Очистка места на runner'е ===
       - name: Очистить место
         run: |
           sudo rm -rf /opt/hostedtoolcache || true
@@ -43,7 +43,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      # === 4. Установка Node.js для Playwright ===
+      # === 4. Установка Node.js ===
       - name: Установить Node.js
         uses: actions/setup-node@v4
         with:
@@ -55,7 +55,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # === 6. Установка Playwright и Chromium с зависимостями ===
+      # === 6. Установка Playwright и Chromium ===
       - name: Установить Playwright и Chromium
         run: |
           pip install playwright
@@ -66,7 +66,7 @@ jobs:
         run: python -m pytest tests/ --alluredir=allure-results -v
         continue-on-error: true
 
-      # === 8. Загрузка истории Allure отчётов из gh-pages ===
+      # === 8. Загрузка истории Allure отчётов ===
       - name: Load test report history
         if: always()
         continue-on-error: true
@@ -75,25 +75,25 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
-      # === 9. Копирование истории в allure-history ===
+      # === 9. Копирование истории ===
       - name: Copy history from previous reports
         if: always()
         run: |
           mkdir -p allure-history
           cp -r gh-pages/* allure-history/ || true
 
-      # === 10. Генерация Allure отчёта ===
+      # === 10. Генерация Allure отчёта без Docker ===
       - name: Build test report
         if: always()
-        uses: simple-elf/allure-report-action@v1.7
+        uses: simple-elf/allure-generator-action@v1
         with:
-          gh_pages: gh-pages
-          allure_results: allure-results
-          allure_history: allure-history
+          results: allure-results
+          report: allure-history
+          clean: false
 
-      # === 11. Локализация Allure отчёта (перевод на русский) ===
+      # === 11. Локализация Allure отчёта (если существует) ===
       - name: Локализация Allure отчёта
-        if: always()
+        if: always() && hashFiles('allure-history/index.html') != ''
         run: |
           sed -i 's/Overview/Обзор/g' allure-history/index.html
           sed -i 's/Suites/Наборы тестов/g' allure-history/index.html
