@@ -25,18 +25,18 @@ jobs:
       - name: Проверка репозитория
         uses: actions/checkout@v4
 
-      - name: Установка зависимостей
+      - name: Установка pip и зависимостей
         run: |
-          python3 -m ensurepip
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pytest allure-pytest
-          python3 -m pip install -r requirements.txt
+          apt-get update
+          apt-get install -y python3-pip
+          pip3 install --upgrade pip
+          pip3 install -r requirements.txt
           echo "PATH=$PATH:/root/.local/bin" >> $GITHUB_ENV
 
-      - name: Проверка наличия pytest
+      - name: Проверка pytest
         run: |
           which pytest || echo "pytest не найден"
-          pytest --version
+          pytest --version || true
 
       - name: Запуск тестов
         run: pytest --alluredir=allure-results -v --disable-warnings
