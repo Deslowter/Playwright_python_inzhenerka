@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: 🧪 Playwright Tests with Allure
 
 on:
   push:
@@ -6,88 +6,319 @@ on:
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - smoke
+          - e2e
   schedule:
-    - cron: '0 9 * * *'
+    - cron: '0 9 * * 1-5'  # Каждый будний день в 9:00 UTC
 
+# Права для публикации на GitHub Pages
 permissions:
   contents: write
-  issues: write
+  pages: write
+  id-token: write
+
+# Предотвращаем параллельные запуски для одной ветки
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.11'
+  PLAYWRIGHT_BROWSERS_PATH: 0
 
 jobs:
   test:
-    name: Запуск тестов Playwright
+    name: 🎭 Run Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium]
+        shard: [1/1]  # Можно расширить для параллелизма: [1/2, 2/2]
 
     steps:
-      - name: Получить код
-        uses: actions/checkout@v4
+      # ============================================
+      # 1. ПОДГОТОВКА ОКРУЖЕНИЯ
+      # ============================================
 
-      - name: Установить Python
-        uses: actions/setup-python@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
         with:
-          python-version: '3.11'
+          fetch-depth: 0  # Полная история для Allure trends
+
+      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
 
-      - name: Установить зависимости
+      # ============================================
+      # 2. УСТАНОВКА ЗАВИСИМОСТЕЙ
+      # ============================================
+
+      - name: 📦 Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Установить Playwright и Chromium
-        run: python -m playwright install chromium
+      - name: 🎭 Install Playwright browsers
+        run: |
+          playwright install --with-deps ${{ matrix.browser }}
 
-      - name: Запуск тестов
-        run: python -m pytest tests/ --alluredir=allure-results -v
+      # ============================================
+      # 3. ЗАГРУЗКА ИСТОРИИ ALLURE
+      # ============================================
+
+      - name: 📊 Download Allure history
+        if: always()
         continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
 
-      # === 1. Загрузить историю отчётов из gh-pages (как в инструкции) ===
-      - name: Load test report history
-        uses: actions/checkout@v3
+      - name: 📂 Copy Allure history
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -d "gh-pages/allure-history" ]; then
+            mkdir -p allure-results/history
+            cp -r gh-pages/allure-history/* allure-results/history/
+            echo "✅ Allure history copied"
+          else
+            echo "ℹ️ No previous Allure history found"
+          fi
+
+      # ============================================
+      # 4. ЗАПУСК ТЕСТОВ
+      # ============================================
+
+      - name: 🧪 Run Smoke Tests
+        if: ${{ github.event.inputs.test_suite == 'smoke' || github.event.inputs.test_suite == '' }}
+        continue-on-error: true
+        run: |
+          pytest -m smoke \
+            --alluredir=allure-results \
+            --browser=${{ matrix.browser }} \
+            -v \
+            --tb=short
+
+      - name: 🚀 Run E2E Tests
+        if: ${{ github.event.inputs.test_suite == 'e2e' || github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == '' }}
+        continue-on-error: true
+        run: |
+          pytest -m e2e \
+            --alluredir=allure-results \
+            --browser=${{ matrix.browser }} \
+            -v \
+            --tb=short
+
+      - name: 🎯 Run All Tests
+        if: ${{ github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == '' }}
+        continue-on-error: true
+        run: |
+          pytest \
+            --alluredir=allure-results \
+            --browser=${{ matrix.browser }} \
+            -v \
+            --tb=short
+
+      # ============================================
+      # 5. ГЕНЕРАЦИЯ ALLURE ОТЧЕТА
+      # ============================================
+
+      - name: 📊 Get Allure history
+        uses: actions/checkout@v4
         if: always()
         continue-on-error: true
         with:
           ref: gh-pages
           path: gh-pages
 
-      # === 2. Сгенерировать Allure отчёт с историей (как в инструкции) ===
-      - name: Build test report
-        uses: simple-elf/allure-report-action@v1.7
+      - name: 🎨 Generate Allure Report
         if: always()
+        uses: simple-elf/allure-report-action@master
         with:
-          gh_pages: gh-pages               # папка из checkout выше
-          allure_results: allure-results   # результаты текущего прогона
-          allure_history: allure-history   # куда сохранить отчёт + историю
+          allure_results: allure-results
+          allure_history: allure-history
+          keep_reports: 20
 
-      # === 3. Опубликовать отчёт на GitHub Pages (как в инструкции) ===
-      - name: Publish test report
+      - name: 📈 Add executor info to Allure
+        if: always()
+        run: |
+          cat > allure-report/widgets/executor.json <<EOF
+          {
+            "name": "GitHub Actions",
+            "type": "github",
+            "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "buildOrder": ${{ github.run_number }},
+            "buildName": "Run #${{ github.run_number }}",
+            "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "reportUrl": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}/",
+            "reportName": "Allure Report #${{ github.run_number }}"
+          }
+          EOF
+
+      - name: 🌿 Add environment info to Allure
+        if: always()
+        run: |
+          cat > allure-report/widgets/environment.properties <<EOF
+          Browser=${{ matrix.browser }}
+          Python.Version=${{ env.PYTHON_VERSION }}
+          Stand=https://dev.topklik.online/
+          Test.Runner=Pytest
+          Framework=Playwright
+          OS=Ubuntu-latest
+          Executor=GitHub Actions
+          Branch=${{ github.ref_name }}
+          Commit=${{ github.sha }}
+          Author=${{ github.actor }}
+          BuildNumber=${{ github.run_number }}
+          EOF
+
+      # ============================================
+      # 6. ПУБЛИКАЦИЯ ALLURE ОТЧЕТА
+      # ============================================
+
+      - name: 🚀 Deploy Allure Report to GitHub Pages
+        if: always()
         uses: peaceiris/actions-gh-pages@v3
-        if: always() && github.ref == 'refs/heads/main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-history
+          publish_dir: allure-report
+          destination_dir: ${{ github.run_number }}
+          keep_files: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
 
-      # === Опционально: комментарий в PR (остаётся как есть) ===
-      - name: Комментировать Pull Request
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+      - name: 📝 Create latest Allure Report link
+        if: always() && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+          destination_dir: latest
+          keep_files: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+
+      # ============================================
+      # 7. СОХРАНЕНИЕ АРТЕФАКТОВ
+      # ============================================
+
+      - name: 📦 Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ matrix.browser }}-${{ github.run_number }}
+          path: allure-results
+          retention-days: 30
+
+      - name: 📦 Upload Allure Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ matrix.browser }}-${{ github.run_number }}
+          path: allure-report
+          retention-days: 30
+
+      - name: 📸 Upload Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.browser }}-${{ github.run_number }}
+          path: screenshots
+          retention-days: 7
+
+      # ============================================
+      # 8. УВЕДОМЛЕНИЯ
+      # ============================================
+
+      - name: 💬 Comment PR with Allure Report
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
         with:
           script: |
-            const comment = `
-            ## Результаты тестов Playwright
-
-            Статус: **${{ job.status }}**  
-            [Артефакты (Allure, логи)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            const runNumber = ${{ github.run_number }};
+            const reportUrl = `https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${runNumber}/`;
+            const latestUrl = `https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/latest/`;
+            
+            const body = `
+            ## 🧪 Test Results
+            
+            | Report | Link |
+            |--------|------|
+            | 📊 Allure Report (this run) | [View Report #${runNumber}](${reportUrl}) |
+            | 📈 Latest Report | [View Latest](${latestUrl}) |
+            | 🎬 GitHub Actions Run | [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+            
+            **Status:** ${{ job.status }}
+            **Browser:** ${{ matrix.browser }}
+            **Commit:** ${{ github.sha }}
             `;
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
+              body: body
             });
+
+      - name: 📊 Create Job Summary
+        if: always()
+        run: |
+          echo "## 🧪 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌐 Browser | ${{ matrix.browser }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🐍 Python | ${{ env.PYTHON_VERSION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔢 Run Number | ${{ github.run_number }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌿 Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 👤 Actor | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Allure Reports" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Report #${{ github.run_number }}](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}/)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Latest Report](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/latest/)" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # ДОПОЛНИТЕЛЬНЫЕ ДЖОБЫ
+  # ============================================
+
+  notify:
+    name: 📢 Send Notifications
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 📊 Send Status
+        run: |
+          echo "Tests completed with status: ${{ needs.test.result }}"
+          echo "Report available at: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ github.run_number }}/"
+
+  cleanup:
+    name: 🧹 Cleanup Old Reports
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+    needs: test
+
+    steps:
+      - name: 🗑️ Remove old Allure reports
+        run: |
+          echo "Keeping only last 20 reports (configured in allure-report-action)"
+          echo "Old reports will be automatically removed by keep_reports: 20"
