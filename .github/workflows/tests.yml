@@ -25,6 +25,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip  # Обновляем pip до последней версии
           pip install -r requirements.txt  # Устанавливаем зависимости, указанные в requirements.txt
+          pip install pytest-xdist
 
       - name: Run API tests with pytest and generate Allure results
         run: |
