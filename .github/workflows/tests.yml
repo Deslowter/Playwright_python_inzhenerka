@@ -61,14 +61,7 @@ jobs:
           path: /opt/allure-2.35.1
           key: allure-2.35.1-${{ runner.os }}
 
-      # Устанавливаем только системные зависимости если нужно
-      - name: Install system dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
-          libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 \
-          libxrandr2 libgbm1 libasound2
+      # Системные зависимости устанавливаются автоматически через playwright install --with-deps
 
       # Устанавливаем Python зависимости (с кэшем pip это быстро)
       - name: Install Python dependencies
@@ -78,6 +71,7 @@ jobs:
           pip install -r requirements.txt
 
       # Устанавливаем Playwright браузеры только если кэш промахнулся
+      # --with-deps автоматически установит все системные зависимости
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: playwright install chromium --with-deps
