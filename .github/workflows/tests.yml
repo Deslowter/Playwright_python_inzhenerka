@@ -30,6 +30,13 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Установка зависимостей
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "export PATH=$PATH:/home/pwuser/.local/bin" >> $GITHUB_ENV
+
+
       - name: Запуск тестов
         run: pytest --alluredir=allure-results -v --disable-warnings
 
