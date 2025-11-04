@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 15
     container:
       image: mcr.microsoft.com/playwright/python:v1.40.0-jammy
-      options: --user 1001
+      options: --user root
 
     steps:
       - name: Проверка репозитория
@@ -27,15 +27,16 @@ jobs:
 
       - name: Установка зависимостей
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          python3 -m ensurepip
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pytest allure-pytest
+          python3 -m pip install -r requirements.txt
+          echo "PATH=$PATH:/root/.local/bin" >> $GITHUB_ENV
 
-      - name: Установка зависимостей
+      - name: Проверка наличия pytest
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          echo "export PATH=$PATH:/home/pwuser/.local/bin" >> $GITHUB_ENV
-
+          which pytest || echo "pytest не найден"
+          pytest --version
 
       - name: Запуск тестов
         run: pytest --alluredir=allure-results -v --disable-warnings
