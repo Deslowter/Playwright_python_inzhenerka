@@ -37,7 +37,7 @@ env:
 jobs:
   test:
     name: 🎭 Run Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
 
     strategy:
@@ -178,7 +178,7 @@ jobs:
           Stand=https://dev.topklik.online/
           Test.Runner=Pytest
           Framework=Playwright
-          OS=Ubuntu-latest
+          OS=ubuntu-22.04
           Executor=GitHub Actions
           Branch=${{ github.ref_name }}
           Commit=${{ github.sha }}
@@ -302,7 +302,7 @@ jobs:
   notify:
     name: 📢 Send Notifications
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: always()
 
     steps:
@@ -313,7 +313,7 @@ jobs:
 
   cleanup:
     name: 🧹 Cleanup Old Reports
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: always() && github.ref == 'refs/heads/main'
     needs: test
 
