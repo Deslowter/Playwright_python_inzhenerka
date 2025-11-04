@@ -1,4 +1,4 @@
-name: Playwright + Allure Tests
+name: Playwright Tests
 
 on:
   push:
@@ -7,60 +7,60 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: '0 9 * * *'
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   test:
-    name: Playwright + Allure
+    name: Запуск тестов Playwright
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    container:
-      image: mcr.microsoft.com/playwright/python:v1.40.0-jammy
-      options: --user root
 
     steps:
-      - name: Проверка репозитория
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Установка pip и зависимостей
+      - name: Установка Python и зависимостей
         run: |
-          apt-get update
-          apt-get install -y python3-pip
-          pip3 install --upgrade pip
-          pip3 install -r requirements.txt
-          echo "PATH=$PATH:/root/.local/bin" >> $GITHUB_ENV
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip python3-venv openjdk-11-jre wget unzip
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pytest allure-pytest playwright
+          python3 -m playwright install --with-deps
 
-      - name: Проверка pytest
+      - name: Установка Allure Commandline
         run: |
-          which pytest || echo "pytest не найден"
-          pytest --version || true
+          wget https://github.com/allure-framework/allure2/releases/latest/download/allure-2.29.0.zip -O allure.zip
+          unzip allure.zip -d /opt/
+          sudo ln -s /opt/allure-2.29.0/bin/allure /usr/local/bin/allure
+          allure --version
 
       - name: Запуск тестов
-        run: pytest --alluredir=allure-results -v --disable-warnings
+        run: |
+          pytest --alluredir=allure-results -v --disable-warnings
 
-      - name: Генерация Allure отчёта
+      - name: Генерация Allure отчета
+        if: always()
         run: |
           mkdir -p allure-report
           allure generate allure-results --clean -o allure-report
 
-      - name: Локализация Allure отчёта
+      - name: Локализация Allure отчета
         if: always()
         run: |
-          sed -i 's/Overview/Обзор/g' allure-report/index.html || true
-          sed -i 's/Suites/Наборы тестов/g' allure-report/index.html || true
-          sed -i 's/Graphs/Графики/g' allure-report/index.html || true
-          sed -i 's/Timeline/Хронология/g' allure-report/index.html || true
-          sed -i 's/Behaviors/Поведение/g' allure-report/index.html || true
-          sed -i 's/Packages/Пакеты/g' allure-report/index.html || true
+          sed -i 's/Overview/Обзор/g' allure-report/index.html
+          sed -i 's/Suites/Наборы тестов/g' allure-report/index.html
+          sed -i 's/Graphs/Графики/g' allure-report/index.html
+          sed -i 's/Timeline/Хронология/g' allure-report/index.html
+          sed -i 's/Behaviors/Поведение/g' allure-report/index.html
+          sed -i 's/Packages/Пакеты/g' allure-report/index.html
 
-      - name: Публикация Allure отчёта на GitHub Pages
+      - name: Публикация Allure отчета на GitHub Pages
         if: always()
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./allure-report
-          publish_branch: gh-pages
-          commit_message: "Обновление Allure отчёта [${{ github.run_number }}]"
+          publish_dir: allure-report
