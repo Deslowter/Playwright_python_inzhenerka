@@ -41,6 +41,13 @@ jobs:
           playwright install chromium
           playwright install-deps
 
+      - name: Create unique report directory
+        run: |
+          export REPORT_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          export REPORT_DIR="allure-report-${REPORT_TIMESTAMP}-${GITHUB_RUN_ID}"
+          echo "REPORT_DIR=${REPORT_DIR}" >> $GITHUB_ENV
+          mkdir -p $REPORT_DIR
+
       - name: Run smoke tests
         run: |
           pytest -m smoke --alluredir=allure-results
@@ -60,14 +67,14 @@ jobs:
           sudo mv allure-2.24.1 /opt/allure
           sudo ln -s /opt/allure/bin/allure /usr/bin/allure
           
-          # Генерация отчета
-          allure generate allure-results --clean -o allure-report
+          # Генерация отчета в уникальную папку
+          allure generate allure-results --clean -o ${{ env.REPORT_DIR }}
 
       - name: Upload Allure Results
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: allure-results
+          name: allure-results-${{ github.run_id }}
           path: allure-results
           retention-days: 30
 
@@ -75,15 +82,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: allure-report
-          path: allure-report
+          name: allure-report-${{ github.run_id }}
+          path: ${{ env.REPORT_DIR }}
           retention-days: 30
 
       - name: Upload Screenshots
         if: failure()
         uses: actions/upload-artifact@v3
         with:
-          name: screenshots
+          name: screenshots-${{ github.run_id }}
           path: screenshots
           retention-days: 7
 
@@ -92,9 +99,81 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./allure-report
+          publish_dir: ${{ env.REPORT_DIR }}
           publish_branch: gh-pages
-          destination_dir: allure-report
+          # Сохраняем отчеты в папке с уникальным идентификатором
+          destination_dir: reports/${{ github.run_id }}/${{ github.run_number }}
+
+      - name: Generate Reports Index
+        if: always() && github.ref == 'refs/heads/main'
+        run: |
+          # Создаем временную папку для индекса
+          mkdir -p index-temp
+          
+          # Клонируем текущую ветку gh-pages для получения существующих отчетов
+          git clone --branch gh-pages --single-branch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git index-temp
+          
+          # Генерируем HTML для индексной страницы
+          cat > index-temp/index.html << EOF
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Allure Reports History</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              h1 { color: #333; }
+              table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              tr:hover { background-color: #f5f5f5; }
+              .status-passed { color: green; }
+              .status-failed { color: red; }
+              .date { font-size: 0.9em; color: #666; }
+            </style>
+          </head>
+          <body>
+            <h1>Allure Reports History</h1>
+            <p>Последнее обновление: $(date)</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Номер прогона</th>
+                  <th>ID прогона</th>
+                  <th>Статус</th>
+                  <th>Ссылка на отчет</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Здесь будут добавляться записи о прогоне -->
+                <tr>
+                  <td>$(date)</td>
+                  <td>${{ github.run_number }}</td>
+                  <td>${{ github.run_id }}</td>
+                  <td class="status-${{ job.status == 'success' && 'passed' || 'failed' }}">${{ job.status }}</td>
+                  <td><a href="reports/${{ github.run_id }}/${{ github.run_number }}/">Открыть отчет</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </body>
+          </html>
+          EOF
+          
+          # Добавляем новую запись в индексную страницу или создаем новую
+          cd index-temp
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          # Добавляем изменения
+          git add .
+          git commit -m "Update reports index - Run ID: ${{ github.run_id }}, Status: ${{ job.status }}"
+          
+          # Пушим изменения обратно в gh-pages
+          git push origin gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment PR with results
         if: github.event_name == 'pull_request'
