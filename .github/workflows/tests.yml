@@ -1,5 +1,4 @@
 name: Playwright Tests
-
 on:
   push:
     branches: [ main, develop ]
@@ -8,17 +7,14 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 9 * * *'
-
 permissions:
   contents: write
   issues: write
-
 jobs:
   test:
     name: Запуск тестов Playwright
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,13 +26,6 @@ jobs:
           python3 -m pip install --upgrade pip
           python3 -m pip install -r requirements.txt
           python3 -m playwright install --with-deps
-
-      - name: Установка Allure Commandline
-        run: |
-          wget https://github.com/allure-framework/allure2/releases/download/2.35.1/allure-2.35.1.zip -O allure.zip
-          unzip allure.zip -d /opt/
-          sudo ln -s /opt/allure-2.35.1/bin/allure /usr/local/bin/allure
-          allure --version
 
       - name: Запуск тестов
         run: |
@@ -52,7 +41,7 @@ jobs:
 
       - name: Генерация Allure отчета с историей
         if: always()
-        uses: simple-elf/allure-report-action@v1.7.0
+        uses: simple-elf/allure-report-action@master
         id: allure-report
         with:
           allure_results: allure-results
@@ -72,7 +61,7 @@ jobs:
 
       - name: Публикация Allure отчета на GitHub Pages
         if: always()
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: allure-history
