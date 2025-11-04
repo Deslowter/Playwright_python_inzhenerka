@@ -72,25 +72,25 @@ jobs:
 
       - name: Upload Allure Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: allure-results-${{ github.run_id }}
+          artifact-name: allure-results-${{ github.run_id }}
           path: allure-results
           retention-days: 30
 
       - name: Upload Allure Report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: allure-report-${{ github.run_id }}
+          artifact-name: allure-report-${{ github.run_id }}
           path: ${{ env.REPORT_DIR }}
           retention-days: 30
 
       - name: Upload Screenshots
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: screenshots-${{ github.run_id }}
+          artifact-name: screenshots-${{ github.run_id }}
           path: screenshots
           retention-days: 7
 
@@ -177,10 +177,9 @@ jobs:
 
       - name: Comment PR with results
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
             const comment = `
             ## 🧪 Test Results
             
