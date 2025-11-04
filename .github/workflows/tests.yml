@@ -1,4 +1,3 @@
-# NOTE: This workflow requires that the current repo have a branch 'gh-pages' to hold the github pages source
 name: Playwright Tests
 on:
   push:
@@ -73,7 +72,7 @@ jobs:
 
       - name: Публикация Allure отчета на GitHub Pages
         if: always()
-        uses: peaceiris/actions-gh-pages@v4  # Обновлено на v4 для consistency с примерами
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
