@@ -1,93 +1,57 @@
-name: Playwright Tests
+name: Playwright Tests with Allure
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch:
-  schedule:
-    - cron: '0 9 * * *'
-
-permissions:
-  contents: write
-  issues: write
+    branches: [ main ]
 
 jobs:
   test:
-    name: Запуск тестов Playwright
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [chromium]
-
+    timeout-minutes: 60
     steps:
-      - name: Получить код
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Установить Python
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: '3.12'
 
-      - name: Установить зависимости
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Установить Playwright и Chromium
-        run: python -m playwright install chromium
+      - name: Install Playwright browsers
+        run: python -m playwright install --with-deps
 
-      - name: Запуск тестов
-        run: python -m pytest tests/ --alluredir=allure-results -v
-        continue-on-error: true
+      - name: Run Pytest with Allure
+        run: pytest --alluredir=allure-results tests/  # Adjust 'tests/' to your test directory if needed
 
-      # === 1. Загрузить историю отчётов из gh-pages (как в инструкции) ===
-      - name: Load test report history
-        uses: actions/checkout@v3
+      - name: Get Allure history
+        uses: actions/checkout@v4
         if: always()
         continue-on-error: true
         with:
           ref: gh-pages
           path: gh-pages
 
-      # === 2. Сгенерировать Allure отчёт с историей (как в инструкции) ===
-      - name: Build test report
+      - name: Generate Allure Report with History
         uses: simple-elf/allure-report-action@v1.7
         if: always()
+        id: allure-report
         with:
-          gh_pages: gh-pages               # папка из checkout выше
-          allure_results: allure-results   # результаты текущего прогона
-          allure_history: allure-history   # куда сохранить отчёт + историю
+          allure_results: allure-results
+          gh_pages: gh-pages
+          allure_report: allure-report
+          allure_history: allure-history
 
-      # === 3. Опубликовать отчёт на GitHub Pages (как в инструкции) ===
-      - name: Publish test report
-        uses: peaceiris/actions-gh-pages@v3
-        if: always() && github.ref == 'refs/heads/main'
+      - name: Deploy Report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
-
-      # === Опционально: комментарий в PR (остаётся как есть) ===
-      - name: Комментировать Pull Request
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const comment = `
-            ## Результаты тестов Playwright
-
-            Статус: **${{ job.status }}**  
-            [Артефакты (Allure, логи)](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            `;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
