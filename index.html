@@ -1,34 +1,44 @@
 <!DOCTYPE html>
-<html dir="ltr" lang="en">
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Allure Report</title>
-    <link rel="icon" href="favicon.ico">
-    <link rel="stylesheet" type="text/css" href="styles.css">
-    <link rel="stylesheet" type="text/css" href="plugin/screen-diff/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allure Reports History</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    h1 { color: #333; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    tr:hover { background-color: #f5f5f5; }
+    .status-passed { color: green; }
+    .status-failed { color: red; }
+    .date { font-size: 0.9em; color: #666; }
+  </style>
 </head>
 <body>
-    <div id="alert"></div>
-    <div id="content">
-        <span class="spinner">
-            <span class="spinner__circle"></span>
-        </span>
-    </div>
-    <div id="popup"></div>
-    <script src="app.js"></script>
-    <script src="plugin/behaviors/index.js"></script>
-    <script src="plugin/packages/index.js"></script>
-    <script src="plugin/screen-diff/index.js"></script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FVWC4GKEYS"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-FVWC4GKEYS', {
-          'allureVersion': '2.32.0',
-          'reportUuid': '3e034cb8-4305-4b7d-95d1-d3d41bc204d1',
-          'single_file': false
-        });
-    </script>
+  <h1>Allure Reports History</h1>
+  <p>Последнее обновление: Tue Nov  4 14:52:59 UTC 2025</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Номер прогона</th>
+        <th>ID прогона</th>
+        <th>Статус</th>
+        <th>Ссылка на отчет</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Здесь будут добавляться записи о прогоне -->
+      <tr>
+        <td>Tue Nov  4 14:52:59 UTC 2025</td>
+        <td>35</td>
+        <td>19072716297</td>
+        <td class="status-failed">failure</td>
+        <td><a href="reports/19072716297/35/">Открыть отчет</a></td>
+      </tr>
+    </tbody>
+  </table>
 </body>
 </html>
