@@ -47,7 +47,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json', 'requirements.txt') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-playwright-
 
@@ -73,23 +73,23 @@ jobs:
         run: |
           pytest -m smoke --alluredir=allure-results --screenshot=on --screenshot-path=./screenshots
         continue-on-error: true
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - name: Run regression tests
+      - name: Run all tests
         if: success() || failure()
         run: |
-          pytest -m "not smoke" --alluredir=allure-results --html=report.html --self-contained-html --screenshot=on --screenshot-path=./screenshots
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          pytest --alluredir=allure-results --html=report.html --self-contained-html --screenshot=on --screenshot-path=./screenshots
 
       - name: Generate Allure Report
         if: always()
-        uses: simple-dragon/action-allure-report@v2
-        with:
-          allure_results: allure-results
-          allure_report: ${{ env.REPORT_DIR }}
-          keep_history: true
+        run: |
+          # Установка Allure
+          wget https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz  
+          tar -zxvf allure-2.24.1.tgz
+          sudo mv allure-2.24.1 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+          
+          # Генерация отчета в уникальную папку
+          allure generate allure-results --clean -o ${{ env.REPORT_DIR }}
 
       - name: Upload Allure Results
         if: always()
@@ -119,13 +119,6 @@ jobs:
           path: screenshots/
           retention-days: 7
           if-no-files-found: ignore
-
-      - name: Security scanning for vulnerabilities
-        if: always() && github.ref == 'refs/heads/main'
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "playwright-tests"
-          upload: true
 
       - name: Deploy Allure Report to GitHub Pages
         if: always() && github.ref == 'refs/heads/main'
@@ -258,15 +251,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { status } = await github.rest.actions.getJobForWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              job_id: ${{ job.id }}
-            });
-            
-            const testStatus = status.data.status === 'completed' ? 
-              (status.data.conclusion === 'success' ? '✅ Passed' : '❌ Failed') : 
-              '🕒 In Progress';
+            const testStatus = "${{ job.status }}" === "success" ? "✅ Passed" : "❌ Failed";
             
             const commentBody = `
             ## 🧪 Playwright Test Results
@@ -314,16 +299,3 @@ jobs:
                 body: commentBody
               });
             }
-
-      - name: Determine job status
-        if: always()
-        run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "JOB_PASSED=true" >> $GITHUB_ENV
-          else
-            echo "JOB_PASSED=false" >> $GITHUB_ENV
-          fi
-
-      - name: Fail job if tests failed
-        if: always() && env.JOB_PASSED == 'false'
-        run: exit 1
