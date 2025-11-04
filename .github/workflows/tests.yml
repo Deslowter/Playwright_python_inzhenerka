@@ -46,34 +46,50 @@ jobs:
         run: python -m pytest tests/ --alluredir=allure-results -v
         continue-on-error: true
 
-      # === 1. Загрузить историю отчётов из gh-pages (как в инструкции) ===
+      # === 1. Загрузить ветку gh-pages с историей ===
       - name: Load test report history
-        uses: actions/checkout@v3
         if: always()
         continue-on-error: true
+        uses: actions/checkout@v3
         with:
           ref: gh-pages
           path: gh-pages
 
-      # === 2. Сгенерировать Allure отчёт с историей (как в инструкции) ===
-      - name: Build test report
-        uses: simple-elf/allure-report-action@v1.7
+      #
+      - name: Copy history from previous reports
         if: always()
-        with:
-          gh_pages: gh-pages               # папка из checkout выше
-          allure_results: allure-results   # результаты текущего прогона
-          allure_history: allure-history   # куда сохранить отчёт + историю
+        run: |
+          mkdir -p allure-history
+          cp -r gh-pages/* allure-history/ || true
 
-      # === 3. Опубликовать отчёт на GitHub Pages (как в инструкции) ===
-      - name: Publish test report
-        uses: peaceiris/actions-gh-pages@v3
+      #
+      - name: Build test report
+        if: always()
+        uses: simple-elf/allure-report-action@v1.7
+        with:
+          gh_pages: gh-pages
+          allure_results: allure-results
+          allure_history: allure-history
+
+      #
+      - name: Локализация Allure отчёта
+        if: always()
+        run: |
+          sed -i 's/Overview/Обзор/g' allure-history/index.html
+          sed -i 's/Suites/Наборы тестов/g' allure-history/index.html
+          sed -i 's/Graphs/Графики/g' allure-history/index.html
+          sed -i 's/Timeline/Хронология/g' allure-history/index.html
+
+      #
+      - name: PПубликация test report
         if: always() && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
 
-      # === Опционально: комментарий в PR (остаётся как есть) ===
+      # === 6. Комментарий в Pull Request ===
       - name: Комментировать Pull Request
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
