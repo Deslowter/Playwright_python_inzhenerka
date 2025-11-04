@@ -10,36 +10,56 @@ on:
     # Запуск каждый день в 9:00 UTC (можно настроить)
     - cron: '0 9 * * *'
 
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  issues: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
 jobs:
   test:
     name: Run Playwright Tests
     runs-on: ubuntu-latest
+    environment: production
 
     strategy:
       fail-fast: false
       matrix:
-        # Можно запускать на разных браузерах
         browser: [chromium]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json', 'requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install allure-pytest pytest-html
 
       - name: Install Playwright browsers
         run: |
-          playwright install chromium
-          playwright install-deps
+          python -m playwright install chromium --with-deps
 
       - name: Create unique report directory
         run: |
@@ -47,62 +67,77 @@ jobs:
           export REPORT_DIR="allure-report-${REPORT_TIMESTAMP}-${GITHUB_RUN_ID}"
           echo "REPORT_DIR=${REPORT_DIR}" >> $GITHUB_ENV
           mkdir -p $REPORT_DIR
+          mkdir -p screenshots
 
       - name: Run smoke tests
         run: |
-          pytest -m smoke --alluredir=allure-results
+          pytest -m smoke --alluredir=allure-results --screenshot=on --screenshot-path=./screenshots
         continue-on-error: true
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
-      - name: Run all tests
+      - name: Run regression tests
+        if: success() || failure()
         run: |
-          pytest --alluredir=allure-results --html=report.html --self-contained-html
-        continue-on-error: true
+          pytest -m "not smoke" --alluredir=allure-results --html=report.html --self-contained-html --screenshot=on --screenshot-path=./screenshots
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
       - name: Generate Allure Report
         if: always()
-        run: |
-          # Установка Allure
-          wget https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz  
-          tar -zxvf allure-2.24.1.tgz
-          sudo mv allure-2.24.1 /opt/allure
-          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
-          
-          # Генерация отчета в уникальную папку
-          allure generate allure-results --clean -o ${{ env.REPORT_DIR }}
+        uses: simple-dragon/action-allure-report@v2
+        with:
+          allure_results: allure-results
+          allure_report: ${{ env.REPORT_DIR }}
+          keep_history: true
 
       - name: Upload Allure Results
         if: always()
-        uses: actions/upload-artifact@v4  # ИСПРАВЛЕНО: v3 заменена на v4
+        uses: actions/upload-artifact@v4
         with:
           name: allure-results-${{ github.run_id }}
-          path: allure-results
+          path: allure-results/
           retention-days: 30
+          if-no-files-found: ignore
+          overwrite: true
 
       - name: Upload Allure Report
         if: always()
-        uses: actions/upload-artifact@v4  # ИСПРАВЛЕНО: v3 заменена на v4
+        uses: actions/upload-artifact@v4
         with:
           name: allure-report-${{ github.run_id }}
-          path: ${{ env.REPORT_DIR }}
+          path: ${{ env.REPORT_DIR }}/
           retention-days: 30
+          if-no-files-found: ignore
+          overwrite: true
 
-      - name: Upload Screenshots
+      - name: Upload Screenshots on Failure
         if: failure()
-        uses: actions/upload-artifact@v4  # ИСПРАВЛЕНО: v3 заменена на v4
+        uses: actions/upload-artifact@v4
         with:
           name: screenshots-${{ github.run_id }}
-          path: screenshots
+          path: screenshots/
           retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Security scanning for vulnerabilities
+        if: always() && github.ref == 'refs/heads/main'
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "playwright-tests"
+          upload: true
 
       - name: Deploy Allure Report to GitHub Pages
         if: always() && github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ${{ env.REPORT_DIR }}
           publish_branch: gh-pages
-          # Сохраняем отчеты в папке с уникальным идентификатором
+          keep_files: true
           destination_dir: reports/${{ github.run_id }}/${{ github.run_number }}
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
 
       - name: Generate Reports Index
         if: always() && github.ref == 'refs/heads/main'
@@ -122,49 +157,92 @@ jobs:
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Allure Reports History</title>
             <style>
-              body { font-family: Arial, sans-serif; margin: 40px; }
-              h1 { color: #333; }
-              table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-              th { background-color: #f2f2f2; }
-              tr:hover { background-color: #f5f5f5; }
-              .status-passed { color: green; }
-              .status-failed { color: red; }
-              .date { font-size: 0.9em; color: #666; }
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif; margin: 40px; background-color: #f6f8fa; }
+              h1 { color: #24292e; border-bottom: 1px solid #eaecef; padding-bottom: 10px; }
+              .updated { color: #586069; font-size: 0.9em; margin-bottom: 20px; }
+              table { border-collapse: collapse; width: 100%; margin-top: 20px; background-color: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
+              th, td { border: 1px solid #e1e4e8; padding: 12px 15px; text-align: left; }
+              th { background-color: #f6f8fa; font-weight: 600; color: #24292e; }
+              tr:hover { background-color: #f6f8fa; }
+              .status-passed { color: #28a745; font-weight: 500; }
+              .status-failed { color: #cb2431; font-weight: 500; }
+              .status-skipped { color: #6a737d; font-weight: 500; }
+              a { color: #0366d6; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .date { font-size: 0.9em; color: #586069; }
+              .filters { margin-bottom: 20px; display: flex; gap: 10px; }
+              .filter-btn { padding: 6px 12px; border: 1px solid #e1e4e8; border-radius: 6px; background: white; cursor: pointer; }
+              .filter-btn.active { background-color: #0366d6; color: white; border-color: #0366d6; }
             </style>
           </head>
           <body>
             <h1>Allure Reports History</h1>
-            <p>Последнее обновление: $(date)</p>
+            <p class="updated">Last updated: $(date +"%Y-%m-%d %H:%M:%S UTC")</p>
+            
+            <div class="filters">
+              <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="passed">Passed</button>
+              <button class="filter-btn" data-filter="failed">Failed</button>
+            </div>
+            
             <table>
               <thead>
                 <tr>
-                  <th>Дата</th>
-                  <th>Номер прогона</th>
-                  <th>ID прогона</th>
-                  <th>Статус</th>
-                  <th>Ссылка на отчет</th>
+                  <th>Run Date</th>
+                  <th>Run #</th>
+                  <th>Run ID</th>
+                  <th>Status</th>
+                  <th>Report Link</th>
+                  <th>Artifacts</th>
                 </tr>
               </thead>
               <tbody>
-                <!-- Здесь будут добавляться записи о прогоне -->
-                <tr>
-                  <td>$(date)</td>
+                <!-- Запись о текущем прогоне -->
+                <tr data-status="${{ job.status == 'success' && 'passed' || 'failed' }}">
+                  <td class="date">$(date +"%Y-%m-%d %H:%M:%S UTC")</td>
                   <td>${{ github.run_number }}</td>
                   <td>${{ github.run_id }}</td>
-                  <td class="status-${{ job.status == 'success' && 'passed' || 'failed' }}">${{ job.status }}</td>
-                  <td><a href="reports/${{ github.run_id }}/${{ github.run_number }}/">Открыть отчет</a></td>
+                  <td class="status-${{ job.status == 'success' && 'passed' || 'failed' }}">${{ job.status == 'success' && 'Passed' || 'Failed' }}</td>
+                  <td><a href="reports/${{ github.run_id }}/${{ github.run_number }}/">View Report</a></td>
+                  <td><a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts">Download</a></td>
                 </tr>
               </tbody>
             </table>
+            
+            <script>
+              document.addEventListener('DOMContentLoaded', function() {
+                const filterButtons = document.querySelectorAll('.filter-btn');
+                const rows = document.querySelectorAll('tbody tr');
+                
+                filterButtons.forEach(button => {
+                  button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    const filter = this.getAttribute('data-filter');
+                    
+                    rows.forEach(row => {
+                      if (filter === 'all') {
+                        row.style.display = '';
+                      } else {
+                        const status = row.getAttribute('data-status');
+                        row.style.display = status === filter ? '' : 'none';
+                      }
+                    });
+                  });
+                });
+              });
+            </script>
           </body>
           </html>
           EOF
           
           # Добавляем новую запись в индексную страницу или создаем новую
           cd index-temp
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Добавляем изменения
           git add .
@@ -176,24 +254,76 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment PR with results
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request' && (success() || failure())
+        uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const comment = `
-            ## 🧪 Test Results
-            
-            Tests have been executed. Check the artifacts for detailed results:
-            - 📊 [Allure Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            - 📸 Screenshots (if any failures)
-            
-            Status: ${{ job.status }}
-            `;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            const { status } = await github.rest.actions.getJobForWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
+              job_id: ${{ job.id }}
             });
+            
+            const testStatus = status.data.status === 'completed' ? 
+              (status.data.conclusion === 'success' ? '✅ Passed' : '❌ Failed') : 
+              '🕒 In Progress';
+            
+            const commentBody = `
+            ## 🧪 Playwright Test Results
+            
+            **Status:** ${testStatus}
+            **Run ID:** #${{ github.run_id }}
+            **Tests executed at:** $(date)
+            
+            ### 📊 Reports
+            - [HTML Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)
+            - [Allure Report](https://htmlpreview.github.io/?https://github.com/${{ github.repository }}/blob/gh-pages/reports/${{ github.run_id }}/${{ github.run_number }}/index.html)
+            
+            ### 🔄 Next Steps
+            ${testStatus.includes('Passed') ? 
+              '✅ All tests passed! Ready for review.' : 
+              '🔧 Please review the failing tests and screenshots.'}
+            `;
+            
+            // Проверяем, есть ли уже комментарии от этого workflow
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.login === 'github-actions[bot]' && 
+              comment.body.includes('Playwright Test Results')
+            );
+            
+            if (botComment) {
+              // Обновляем существующий комментарий
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              // Создаем новый комментарий
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody
+              });
+            }
+
+      - name: Determine job status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "JOB_PASSED=true" >> $GITHUB_ENV
+          else
+            echo "JOB_PASSED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Fail job if tests failed
+        if: always() && env.JOB_PASSED == 'false'
+        run: exit 1
