@@ -34,6 +34,13 @@ jobs:
           python3 -m pip install -r requirements.txt
           python3 -m playwright install --with-deps
 
+      - name: Создание .env файла для CI
+        run: |
+          echo "BASE_URL=${{ secrets.BASE_URL || 'https://dev.topklik.online/' }}" > .env
+          echo "EMAIL=${{ secrets.TEST_EMAIL || 'tester@inzhenerka.tech' }}" >> .env
+          echo "PASSWORD=${{ secrets.TEST_PASSWORD || 'LetsTest!' }}" >> .env
+          echo ".env файл создан для CI окружения"
+
       - name: Установка Allure Commandline
         run: |
           wget https://github.com/allure-framework/allure2/releases/download/2.35.1/allure-2.35.1.zip -O allure.zip

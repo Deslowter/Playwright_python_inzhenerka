@@ -3,7 +3,11 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+
+# Environment variables (КРИТИЧНО: не коммитить!)
 .env
+.env.*
+!.env.example
 
 # Playwright
 test-results/
