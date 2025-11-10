@@ -36,15 +36,6 @@ cp .env.example .env
 # - PASSWORD (пароль)
 ```
 
-**⚠️ ВАЖНО:** Файл `.env` содержит конфиденциальные данные и **НЕ ДОЛЖЕН** коммититься в Git!
-
-**Пример содержимого `.env`:**
-```bash
-BASE_URL=https://dev.topklik.online/
-EMAIL=tester@inzhenerka.tech
-PASSWORD=LetsTest!
-```
-
 ### 3. Запуск тестов
 
 ```bash
