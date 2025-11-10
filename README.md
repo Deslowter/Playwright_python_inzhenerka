@@ -9,7 +9,7 @@
 
 ```bash
 # Клонирование репозитория
-git clone <ваш-репозиторий>
+git clone <URL-адрес репозитория>
 cd Playwright_python_inzhenerka
 
 # Создание виртуального окружения
@@ -161,25 +161,6 @@ class BasePage(ABC):
 - Безопасность - конфиденциальные данные не в коде
 - Гибкость - можно переопределить через переменные окружения
 
-#### 3. Оптимизированная отчетность Allure
-Декораторы `@allure.step` применяются **только к действиям** (action methods), но **не к проверкам** (assertion helpers):
-
-```python
-# ✅ ПРАВИЛЬНО: Декоратор на действии
-@allure.step("Авторизация: {email}")
-def login(self, email: str, password: str):
-    ...
-
-# ✅ ПРАВИЛЬНО: Проверка БЕЗ декоратора
-def is_logged_in(self) -> bool:
-    return self.is_visible(self.LOGOUT_BUTTON)
-```
-
-**Преимущества:**
-- Нет дублирования шагов в отчете
-- Четкое разделение действий и проверок
-- Читаемая структура отчета
-
 ### Технологический стек
 - **Playwright** - современный фреймворк для автоматизации браузера
 - **Python** - язык программирования
@@ -235,7 +216,7 @@ pytest -n auto
 pytest --alluredir=allure-results
 
 # Запуск на конкретном окружении
-BASE_URL=https://prod.topklik.online/ pytest -m smoke
+BASE_URL=https://dev.topklik.online/ pytest -m smoke
 ```
 
 ### Работа с отчетами
@@ -258,7 +239,7 @@ allure serve allure-results
 cat .env
 
 # Переключение между окружениями
-echo "BASE_URL=https://stage.topklik.online/" > .env
+echo "BASE_URL=https://dev.topklik.online/" > .env
 
 # Временное переопределение для одного запуска
 BASE_URL=https://test.topklik.online/ EMAIL=test@example.com pytest
@@ -273,7 +254,7 @@ BASE_URL=https://test.topklik.online/ EMAIL=test@example.com pytest
 - **Автоматизация:** Полная CI/CD интеграция
 - **Отчетность:** Allure с онлайн-публикацией и оптимизированной структурой шагов
 - **Поддержка:** Модульная структура, легко расширяемая
-- **Конфигурируемость:** Гибкая настройка через .env файлы
+- **Конфигурация:** Гибкая настройка через .env файлы
 
 ---
 
@@ -288,7 +269,7 @@ BASE_URL=https://test.topklik.online/ EMAIL=test@example.com pytest
 ### GitHub Secrets для CI/CD
 Для автоматических запусков в GitHub Actions добавьте следующие secrets:
 1. `DEV_BASE_URL` - URL dev окружения
-2. `STAGE_BASE_URL` - URL stage окружения (опционально)
+2. `STAGE_BASE_URL` - URL stage окружения
 3. `TEST_EMAIL` - логин тестового пользователя
 4. `TEST_PASSWORD` - пароль тестового пользователя
 
