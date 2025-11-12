@@ -11,16 +11,15 @@ class LoginPage(BasePage):
     LOGIN_BUTTON = "[type=button]"
     LOGOUT_BUTTON = "//button[text()='Выйти']"
 
-    def navigate(self):
-        """Переход на страницу авторизации"""
-        self.page.goto(self.base_url)
-        self.page.wait_for_load_state("domcontentloaded")
+    def __init__(self, page, base_url: str = None):
+        """Инициализация страницы авторизаций """
+        super().__init__(page, path="", base_url=base_url)
 
     @allure.step("Авторизация: {email}")
     def login(self, email: str, password: str):
         """Выполнение входа в систему"""
         self.navigate()
-        # Ждем что поле email доступно для ввода (страница загружена)
+        # Ждём что поле email доступно для ввода (страница загружена)
         expect(self.page.locator(self.EMAIL_INPUT)).to_be_visible(timeout=60000)
         self.fill(self.EMAIL_INPUT, email)
         self.fill(self.PASSWORD_INPUT, password)

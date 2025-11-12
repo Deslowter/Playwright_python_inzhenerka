@@ -1,29 +1,26 @@
-from abc import ABC, abstractmethod
 from playwright.sync_api import Page
 import allure
 
 
-class BasePage(ABC):
+class BasePage:
     """
-    Абстрактный базовый класс для всех PageObject классов.
+    Базовый класс для всех Page-Object классов.
     Определяет общие методы и интерфейс для работы со страницами.
     """
 
-    def __init__(self, page: Page, base_url: str = None):
+    def __init__(self, page: Page, path: str = "", base_url: str = None):
         self.page = page
+        self.path = path
         # Получаем BASE_URL из конфигурации, если не передан явно
         if base_url is None:
             from tests.conftest import BASE_URL
             base_url = BASE_URL
         self.base_url = base_url
 
-    @abstractmethod
     def navigate(self):
-        """
-        Абстрактный метод навигации,
-        Каждая страница реализуют свою логику перехода.
-        """
-        pass
+        """Переход на страницу по указанному пути"""
+        self.page.goto(f"{self.base_url}{self.path}")
+        self.page.wait_for_load_state("domcontentloaded")
 
     def click(self, selector: str):
         """Клик по элементу"""

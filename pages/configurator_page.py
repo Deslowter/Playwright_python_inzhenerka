@@ -35,10 +35,9 @@ class ConfiguratorPage(BasePage):
     # Цвет
     COLOR_BLOCK = "[data-testid='stone-block']"
 
-    def navigate(self):
-        """Переход на страницу конфигуратора"""
-        self.page.goto(f"{self.base_url}configurator")
-        self.page.wait_for_load_state("domcontentloaded")
+    def __init__(self, page, base_url: str = None):
+        """Инициализация страницы конфигуратора"""
+        super().__init__(page, path="configurator", base_url=base_url)
 
     # === Методы действия ===
 
