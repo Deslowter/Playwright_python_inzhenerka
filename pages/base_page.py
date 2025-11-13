@@ -1,11 +1,13 @@
+from abc import ABC
 from playwright.sync_api import Page
 import allure
 
 
-class BasePage:
+class BasePage(ABC):
     """
-    Базовый класс для всех Page-Object классов.
+    Абстрактный базовый класс для всех Page-Object классов.
     Определяет общие методы и интерфейс для работы со страницами.
+    Нельзя создать экземпляр BasePage напрямую только конкретные страницы.
     """
 
     def __init__(self, page: Page, path: str = "", base_url: str = None):
