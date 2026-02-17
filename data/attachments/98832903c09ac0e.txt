@@ -82,6 +82,8 @@ HI-MACS
 Staron
 N-010 White
 от 5600₽ за м2
+N-510 Mettalic White
+от 6600₽ за м2
 N-101 Crystal Beige
 от 6700₽ за м2
 N-103 Gray Onix
@@ -93,8 +95,6 @@ N-421 Sanded Cream
 N-423 Sanded Night
 от 6700₽ за м2
 N-440 Sahara
-от 6700₽ за м2
-N-510 Mettalic White
 от 6700₽ за м2
 N-539 Earl Grey
 от 6700₽ за м2
@@ -111,7 +111,7 @@ N-840 Cobble Gold
 N-857 Cobble Brown
 от 6700₽ за м2
 P-104 Pure White
-от 10200₽ за м2
+от 10100₽ за м2
 1
 2
 3
@@ -128,7 +128,7 @@ P-104 Pure White
 10 дней
 ТОП КЛИК
 Демо версия сервиса
-395 400 ₽
+392 800 ₽
 Расчет
 Создать КП
 П-образная столешница
